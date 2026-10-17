@@ -1,11 +1,13 @@
 {
   "name": "tatiana-tta-wheel",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "TATIANA TTA WHEEL — manual-spin wheel app with Kick subscription queue and OBS overlay",
   "author": "exp4nsive",
   "private": true,
   "main": "server.js",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node run.js",
     "test": "node test/run.js",
