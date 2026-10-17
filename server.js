@@ -13,6 +13,8 @@ const crypto = require('crypto');
 try { process.loadEnvFile(path.join(__dirname, '.env')); } catch (_) {}
 const T = require('./public/shared.js');
 const KickModule = require('./lib/kick.js');
+const UpdateModule = require('./lib/update.js');
+const VERSION = require('./package.json').version;
 
 const PORT = +process.env.PORT || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -202,7 +204,7 @@ function adminView() {
   return {
     role: 'admin', rev: state.rev, serverTime: Date.now(), config: state.config, validation: T.validate(state.config),
     participants: participantList(), selectedKey: state.selectedKey, spin: state.spin, rest: state.rest, lastResult: state.lastResult,
-    history: state.history.slice(0, 200), historyTotal: state.history.length, activity: state.activity.slice(0, 40), kick: kick.status(),
+    history: state.history.slice(0, 200), historyTotal: state.history.length, activity: state.activity.slice(0, 40), kick: kick.status(), update: updater.status(),
   };
 }
 function overlayView() {
@@ -234,6 +236,11 @@ setInterval(() => { for (const c of clients) c.res.write(': ping\n\n'); }, 20000
 const kick = KickModule.create({ dataDir: DATA_DIR, env: process.env, log });
 const kickRefresh = () => { if (kick.status().authorized) kick.check().then(broadcast).catch(() => {}); };
 setInterval(kickRefresh, 5 * 60 * 1000).unref();
+
+// ---------- app updates (GitHub Releases, read-only) ----------
+const updater = UpdateModule.create({ current: VERSION, repo: process.env.UPDATE_REPO || 'wolaschkat/tatiana-tta-wheel', enabled: process.env.UPDATE_CHECK !== '0', log });
+const updateRefresh = () => updater.check().then(broadcast).catch(() => {});
+setInterval(updateRefresh, 6 * 60 * 60 * 1000).unref();
 
 // ---------- http helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -371,6 +378,7 @@ async function handle(req, res) {
     if (p === '/api/kick/check' && m === 'POST') { await kick.check(); broadcast(); return sendJson(res, 200, kick.status()); }
     if (p === '/api/kick/subscribe' && m === 'POST') { try { await kick.subscribe(); } catch (e) { throw httpErr(400, e.message); } broadcast(); return sendJson(res, 200, kick.status()); }
     if (p === '/api/kick/disconnect' && m === 'POST') { kick.disconnect(); broadcast(); return sendJson(res, 200, kick.status()); }
+    if (p === '/api/update/check' && m === 'POST') { await updater.check(); broadcast(); return sendJson(res, 200, updater.status()); }
     if (p === '/api/dev/simulate' && m === 'POST') {
       // Test helper: behaves exactly like a real event (queue only) and is labeled "test" in history.
       const b = await readJson(req);
@@ -402,11 +410,12 @@ if (state.spin) {
 if (require.main === module) {
   server.listen(PORT, HOST, () => {
     const base = `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`;
-    console.log('\n  TATIANA TTA WHEEL  — manual spin mode only');
+    console.log(`\n  TATIANA TTA WHEEL v${VERSION}  — manual spin mode only`);
     console.log('  Admin   :', `${base}/#token=${ADMIN_TOKEN}`);
     console.log('  Overlay :', `${base}/overlay.html?token=${OVERLAY_TOKEN}   (OBS Browser Source, 1920x1080)`);
     console.log('  Kick    :', kick.status().label, '\n');
     kickRefresh(); // restore the subscription status right away instead of waiting 5 minutes
+    updateRefresh();
   });
 }
 module.exports = { server, state, ingestEvent, T };

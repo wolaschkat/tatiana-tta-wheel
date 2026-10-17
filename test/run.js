@@ -54,6 +54,11 @@ function unit() {
   r.spinRules.find((x) => x.qty === 5).spins = 8; assert.strictEqual(T.spinsForEvent(r, 'gift', 5), 8);
   r.enabled.renewal = false; assert.strictEqual(T.spinsForEvent(r, 'renewal', 1), 0);
   ok('subs-to-spins rules (exact rule, multiplier, disabled type)');
+
+  const U = require('../lib/update.js');
+  assert.ok(U.compare('v1.0.1', '1.0.0') > 0 && U.compare('v1.10.0', '1.9.9') > 0 && U.compare('2.0.0', '10.0.0') < 0);
+  assert.strictEqual(U.compare('v1.0.0', '1.0.0'), 0); assert.strictEqual(U.compare('nightly', '1.0.0'), 0);
+  ok('update check compares versions numerically and ignores odd tags');
 }
 
 // ---------- integration ----------
@@ -62,7 +67,7 @@ const PEM = publicKey.export({ type: 'spki', format: 'pem' });
 const edKeys = crypto.generateKeyPairSync('ed25519');
 
 function startServer(dir, port, extraEnv) {
-  const p = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT: String(port), DATA_DIR: dir, KICK_PUBLIC_KEY_PEM: PEM, ...extraEnv }, stdio: 'ignore' });
+  const p = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT: String(port), DATA_DIR: dir, KICK_PUBLIC_KEY_PEM: PEM, UPDATE_CHECK: '0', ...extraEnv }, stdio: 'ignore' });
   return p;
 }
 async function waitUp(base) { for (let i = 0; i < 50; i++) { try { await fetch(base + '/'); return; } catch (_) { await sleep(100); } } throw new Error('server did not start'); }

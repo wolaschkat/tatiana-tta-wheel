@@ -26,7 +26,21 @@ Overlay : http://127.0.0.1:3000/overlay.html?token=<overlay token>
 Open the Admin URL once; the token is remembered in your browser. Keep the admin token private.
 Tokens are generated on first start and stored in `data/secrets.json` (or set `ADMIN_TOKEN` / `OVERLAY_TOKEN`).
 
-Run the tests with `npm test` (27 checks: probabilities, queue, manual-only spinning, crash recovery, webhook signatures).
+Run the tests with `npm test` (28 checks: probabilities, queue, manual-only spinning, crash recovery, webhook signatures, version compare).
+
+## Updates
+
+New versions are published as GitHub Releases at https://github.com/wolaschkat/tatiana-tta-wheel/releases.
+
+The app checks for a new release on start and every 6 hours. When one exists, a red **Update vX.Y.Z available** pill appears at the top of the admin page; **App updates** (left panel) shows the release notes and a **Check for updates** button. The check is read-only: nothing is downloaded or installed automatically.
+
+To install an update:
+
+1. Stop the app (close the SERVER and NGROK windows).
+2. Download `tatiana-tta-wheel-vX.Y.Z.zip` from the release and unzip it over the app folder, replacing files.
+3. Start the app again.
+
+Your `.env` (Kick keys, public URL) and `data/` (tokens, queue, history) are never part of a release, so they are kept. Set `UPDATE_CHECK=0` in `.env` to turn the check off.
 
 ## Using the app
 
@@ -115,6 +129,7 @@ The overlay uses its own token and only receives what it draws: wheel layout (no
 ```
 server.js          state, queue, manual spin, SSE, REST, webhook route
 lib/kick.js        Kick OAuth (PKCE), subscriptions, signature check, status
+lib/update.js      read-only check for a newer GitHub Release
 public/shared.js   palette, validation, weighted pick, layout, spin math (server + browser)
 public/wheel.js    wheel drawing, animation, sounds, confetti
 public/index.html, style.css, admin.js   admin UI

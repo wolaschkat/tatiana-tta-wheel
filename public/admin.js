@@ -197,6 +197,23 @@
   $('kickCheck').onclick = act(async () => { await api('POST', '/api/kick/check'); toast('Status refreshed', true); });
   $('kickSub').onclick = act(async () => { await api('POST', '/api/kick/subscribe'); toast('Subscribed', true); });
   $('kickDisc').onclick = act(async () => { if (confirm('Remove the stored Kick authorization?')) await api('POST', '/api/kick/disconnect'); });
+  // ---------- app updates ----------
+  function renderUpdate() {
+    const u = server.update;
+    if (!u) return;
+    const pill = $('updatePill');
+    pill.classList.toggle('hidden', !u.available);
+    pill.textContent = 'Update v' + u.latest + ' available'; pill.href = u.url; pill.title = 'You are running v' + u.current;
+    $('updateGet').classList.toggle('hidden', !u.available); $('updateGet').href = u.url;
+    const status = !u.enabled ? 'Update check is turned off (UPDATE_CHECK=0).'
+      : u.error ? 'Could not check: ' + u.error
+      : u.available ? `<b class="kick-ok">Version ${esc(u.latest)} is available.</b>`
+      : u.checkedAt ? 'You have the latest version.' : 'Checking…';
+    $('updateBox').innerHTML = `<p>${status}</p><div class="hint">Installed: v${esc(u.current)}${u.latest ? ' · latest release: v' + esc(u.latest) : ''}${u.checkedAt ? ' · checked ' + ago(u.checkedAt) : ''}</div>`
+      + (u.available && u.notes ? `<pre class="hint" style="white-space:pre-wrap">${esc(u.notes)}</pre>` : '');
+  }
+  $('updateCheck').onclick = act(async () => { const u = await api('POST', '/api/update/check'); toast(u.error ? 'Could not check: ' + u.error : u.available ? 'Version ' + u.latest + ' is available' : 'You have the latest version', !u.error); });
+
   $('simGo').onclick = act(async () => { const r = await api('POST', '/api/dev/simulate', { username: $('simName').value, type: $('simType').value, qty: Number($('simQty').value) || 1 }); toast(r.added ? 'Simulated event: +' + r.added + ' spins queued. The wheel did not move.' : 'Event ignored by rules', true); });
 
   function setupOverlay() {
@@ -311,7 +328,7 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = 'tta-wheel-history.csv'; a.click();
   });
 
-  function renderAll() { renderDirty(); renderTotals(); renderKick(); renderCenter(); renderRight(); }
+  function renderAll() { renderDirty(); renderTotals(); renderKick(); renderUpdate(); renderCenter(); renderRight(); }
   setInterval(() => { if (server) renderRight(); }, 30000);
   window.addEventListener('beforeunload', (e) => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
   connect();

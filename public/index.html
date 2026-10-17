@@ -17,6 +17,7 @@
     <span id="manualBadge" class="pill pill-red" title="The wheel only spins when you press SPIN">MANUAL SPIN ONLY</span>
     <span id="conn" class="pill">connecting…</span>
     <span id="kickPill" class="pill">Kick: …</span>
+    <a id="updatePill" class="pill pill-red hidden" target="_blank" rel="noopener"></a>
   </div>
 </header>
 
@@ -110,6 +111,16 @@
         <label class="check"><input type="checkbox" data-path="overlay.showRecent" data-type="bool"> Show recent winners</label>
         <p class="hint">Save the configuration to update the preview. Add <code>&amp;sound=1</code> to the URL to play sounds from OBS.</p>
         <div id="prevWrap" class="prevwrap"><iframe id="prev" title="Overlay preview" tabindex="-1"></iframe></div>
+      </details>
+
+      <details class="sec" id="updateSec">
+        <summary>App updates</summary>
+        <div id="updateBox"></div>
+        <div class="row gap">
+          <a class="btn btn-red hidden" id="updateGet" target="_blank" rel="noopener">Download update</a>
+          <button class="btn" id="updateCheck">Check for updates</button>
+        </div>
+        <p class="hint">To install: stop the app, unzip the new version over this folder, start it again. Your <code>.env</code> (Kick keys) and <code>data/</code> are not in the download, so they are kept.</p>
       </details>
     </div>
 
