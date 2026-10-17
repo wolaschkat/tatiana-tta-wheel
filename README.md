@@ -26,7 +26,7 @@ Overlay : http://127.0.0.1:3000/overlay.html?token=<overlay token>
 Open the Admin URL once; the token is remembered in your browser. Keep the admin token private.
 Tokens are generated on first start and stored in `data/secrets.json` (or set `ADMIN_TOKEN` / `OVERLAY_TOKEN`).
 
-Run the tests with `npm test` (30 checks: probabilities, queue, manual-only spinning, crash recovery, webhook signatures, updates).
+Run the tests with `npm test` (32 checks: probabilities, queue, manual-only spinning, crash recovery, webhook signatures, updates).
 
 ## Updating the app (Tatiana)
 

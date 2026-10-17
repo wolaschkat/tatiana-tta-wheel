@@ -70,6 +70,33 @@ function unit() {
   ok('updater never writes .env, data/ or paths outside the app folder');
 }
 
+// GitHub's anonymous limit (60/h per connection) must not block installing an update that was already found.
+async function updaterRateLimit() {
+  console.log('Unit: updater vs GitHub rate limit');
+  const U = require('../lib/update.js'), Z = require('../lib/zip.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tta-upd-'));
+  fs.writeFileSync(path.join(dir, '.env'), 'KICK_CLIENT_SECRET=keep');
+  const zip = Z.write([{ name: 'tatiana-tta-wheel/package.json', data: Buffer.from('{"version":"9.0.0"}') }, { name: 'tatiana-tta-wheel/server.js', data: Buffer.from('//new') }, { name: 'tatiana-tta-wheel/.env', data: Buffer.from('EVIL=1') }]);
+  const release = { tag_name: 'v9.0.0', html_url: 'https://github.com/o/r/releases/tag/v9.0.0', body: '', assets: [{ name: 'tatiana-tta-wheel-v9.0.0.zip', browser_download_url: 'https://github.com/o/r/releases/download/v9.0.0/tatiana-tta-wheel-v9.0.0.zip' }] };
+  let limited = false;
+  const realFetch = global.fetch;
+  global.fetch = async (url) => {
+    if (String(url).includes('/releases/download/')) return new Response(zip);
+    if (limited) return new Response('{}', { status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 600) } });
+    return new Response(JSON.stringify(release));
+  };
+  try {
+    const up = U.create({ current: '1.0.0', repo: 'o/r', appDir: dir, backupDir: path.join(dir, 'data', 'update-backup') });
+    await up.check(); assert.ok(up.status().available);
+    limited = true; await up.check();
+    const s = up.status();
+    assert.ok(s.available && /hourly limit/.test(s.error) && !/HTTP 403/.test(s.error)); ok('rate limit keeps the found update and explains the limit');
+    const r = await up.install();
+    assert.strictEqual(r.version, '9.0.0'); assert.strictEqual(fs.readFileSync(path.join(dir, 'server.js'), 'utf8'), '//new');
+    assert.strictEqual(fs.readFileSync(path.join(dir, '.env'), 'utf8'), 'KICK_CLIENT_SECRET=keep'); ok('install still works while rate-limited; .env in a zip is ignored');
+  } finally { global.fetch = realFetch; fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 // ---------- integration ----------
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const PEM = publicKey.export({ type: 'spki', format: 'pem' });
@@ -202,6 +229,6 @@ async function integration() {
 }
 
 (async () => {
-  try { unit(); await integration(); console.log(`\nAll ${passed} checks passed.`); }
+  try { unit(); await updaterRateLimit(); await integration(); console.log(`\nAll ${passed} checks passed.`); }
   catch (e) { console.error('\nFAILED:', e.message || e); process.exit(1); }
 })();

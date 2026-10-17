@@ -213,8 +213,8 @@
     const status = !u.enabled ? 'Update check is turned off (UPDATE_CHECK=0).'
       : u.installing ? '<b>Installing the update…</b>'
       : u.installed ? `<b class="kick-ok">Version ${esc(u.installed)} is installed.</b> Close the SERVER window and start the app again to finish.`
+      : u.available ? `<b class="kick-ok">Version ${esc(u.latest)} is available.</b>` + (u.error ? `<br><span class="hint">Last check failed: ${esc(u.error)} You can still install it.</span>` : '')
       : u.error ? 'Could not check: ' + esc(u.error)
-      : u.available ? `<b class="kick-ok">Version ${esc(u.latest)} is available.</b>`
       : u.checkedAt ? 'You have the latest version.' : 'Checking…';
     $('updateBox').innerHTML = `<p>${status}</p><div class="hint">Installed: v${esc(u.current)}${u.latest ? ' · latest release: v' + esc(u.latest) : ''}${u.checkedAt ? ' · checked ' + ago(u.checkedAt) : ''}</div>`
       + (u.available && u.notes ? `<pre class="hint" style="white-space:pre-wrap">${esc(u.notes)}</pre>` : '');
@@ -229,7 +229,7 @@
   });
   $('updatePill').onclick = installUpdate;
   $('updateGet').onclick = installUpdate;
-  $('updateCheck').onclick = act(async () => { const u = await api('POST', '/api/update/check'); toast(u.error ? 'Could not check: ' + u.error : u.available ? 'Version ' + u.latest + ' is available' : 'You have the latest version', !u.error); });
+  $('updateCheck').onclick = act(async () => { const u = await api('POST', '/api/update/check'); toast(u.error && !u.available ? 'Could not check: ' + u.error : u.available ? 'Version ' + u.latest + ' is available' : 'You have the latest version', !u.error); });
 
   $('simGo').onclick = act(async () => { const r = await api('POST', '/api/dev/simulate', { username: $('simName').value, type: $('simType').value, qty: Number($('simQty').value) || 1 }); toast(r.added ? 'Simulated event: +' + r.added + ' spins queued. The wheel did not move.' : 'Event ignored by rules', true); });
 
