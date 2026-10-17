@@ -1,0 +1,7 @@
+# Secrets and local config
+.env
+
+# Runtime data (tokens, secrets, wheel state) - created by server.js
+data/
+
+node_modules/

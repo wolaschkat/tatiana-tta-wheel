@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TATIANA TTA WHEEL</title>
+<meta name="author" content="exp4nsive">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand-wrap">
+    <h1 class="brand"><span>TATIANATTA</span> WHEEL</h1>
+    <span class="credit">Created by exp4nsive</span>
+  </div>
+  <div class="top-right">
+    <span id="manualBadge" class="pill pill-red" title="The wheel only spins when you press SPIN">MANUAL SPIN ONLY</span>
+    <span id="conn" class="pill">connecting…</span>
+    <span id="kickPill" class="pill">Kick: …</span>
+  </div>
+</header>
+
+<main class="grid">
+  <!-- LEFT: Wheel settings -->
+  <aside id="left" class="panel">
+    <h2 class="panel-title">Wheel settings</h2>
+    <div class="scroll">
+
+      <details open class="sec">
+        <summary>Segments</summary>
+        <div id="totalBox" class="total"></div>
+        <div class="row gap">
+          <button class="btn btn-red" id="addSeg">Add segment</button>
+          <button class="btn" id="normalize" title="Scale active probabilities so they add up to 100%">Normalize probabilities</button>
+        </div>
+        <label class="check"><input type="checkbox" data-path="equalSize" data-type="bool"> Equal-sized segments (winning odds stay as configured)</label>
+        <div id="segList" class="seglist"></div>
+      </details>
+
+      <details class="sec">
+        <summary>Animation &amp; sound</summary>
+        <div class="fields">
+          <label>Duration (s)<input type="number" min="2" max="60" step="0.5" data-path="anim.duration" data-type="num"></label>
+          <label>Full rotations<input type="number" min="1" max="30" step="1" data-path="anim.rotations" data-type="num"></label>
+          <label>Deceleration<input type="range" min="1.2" max="8" step="0.1" data-path="anim.decel" data-type="num"></label>
+          <label>Volume<input type="range" min="0" max="1" step="0.05" data-path="anim.volume" data-type="num"></label>
+        </div>
+        <label class="check"><input type="checkbox" data-path="anim.sound" data-type="bool"> Sound on</label>
+        <label class="check"><input type="checkbox" data-path="anim.spinSound" data-type="bool"> Spin ticking sound</label>
+        <label class="check"><input type="checkbox" data-path="anim.winSound" data-type="bool"> Winning sound</label>
+        <label class="check"><input type="checkbox" data-path="anim.effects" data-type="bool"> Winning effects (confetti)</label>
+        <label class="check"><input type="checkbox" data-path="confirmResult" data-type="bool"> Require CONFIRM RESULT before a spin is deducted</label>
+      </details>
+
+      <details class="sec">
+        <summary>Subs to spins</summary>
+        <p class="hint">Exact-quantity rules win. Otherwise spins = quantity × the multiplier for that event type.</p>
+        <div class="fields three">
+          <label class="check"><input type="checkbox" data-path="enabled.new" data-type="bool"> New sub</label>
+          <label>Spins each<input type="number" min="0" data-path="perSub.new" data-type="num"></label>
+          <span></span>
+          <label class="check"><input type="checkbox" data-path="enabled.renewal" data-type="bool"> Renewal</label>
+          <label>Spins each<input type="number" min="0" data-path="perSub.renewal" data-type="num"></label>
+          <span></span>
+          <label class="check"><input type="checkbox" data-path="enabled.gift" data-type="bool"> Gifted subs</label>
+          <label>Spins each<input type="number" min="0" data-path="perSub.gift" data-type="num"></label>
+          <span></span>
+        </div>
+        <label>Gifted subs give spins to
+          <select data-path="giftRecipient" data-type="text"><option value="gifter">the gifter</option><option value="giftees">each recipient</option></select>
+        </label>
+        <div class="subhead">Quantity rules</div>
+        <div id="rules"></div>
+        <button class="btn" id="addRule">Add rule</button>
+      </details>
+
+      <details class="sec">
+        <summary>Kick integration</summary>
+        <div id="kickBox"></div>
+        <div class="row gap">
+          <a class="btn btn-red" id="kickConnect" href="#">Connect Kick</a>
+          <button class="btn" id="kickCheck">Check status</button>
+          <button class="btn" id="kickSub">Re-subscribe</button>
+          <button class="btn btn-ghost" id="kickDisc">Disconnect</button>
+        </div>
+        <div class="subhead">Simulate an event (test only)</div>
+        <p class="hint">Fires the same code path as a real Kick event. It only updates the queue — the wheel stays still. Marked “test” in history.</p>
+        <div class="row gap">
+          <input id="simName" value="tatia_fan" aria-label="Username">
+          <select id="simType" aria-label="Event type"><option value="new">new sub</option><option value="gift">gift subs</option><option value="renewal">renewal</option></select>
+          <input id="simQty" type="number" min="1" value="2" style="width:64px" aria-label="Quantity">
+          <button class="btn" id="simGo">Send</button>
+        </div>
+      </details>
+
+      <details class="sec">
+        <summary>OBS overlay</summary>
+        <p class="hint">Add a Browser Source in OBS (1920 × 1080) with this URL. Don’t show it on stream or share it.</p>
+        <div class="row gap"><input id="overlayUrl" readonly><button class="btn" id="copyOverlay">Copy</button></div>
+        <div class="fields">
+          <label>Wheel X<input type="number" data-path="overlay.wheelX" data-type="num"></label>
+          <label>Wheel Y<input type="number" data-path="overlay.wheelY" data-type="num"></label>
+          <label>Wheel size<input type="number" data-path="overlay.wheelSize" data-type="num"></label>
+          <label>Panel X<input type="number" data-path="overlay.panelX" data-type="num"></label>
+          <label>Panel Y<input type="number" data-path="overlay.panelY" data-type="num"></label>
+          <label>Panel scale<input type="number" step="0.1" min="0.3" max="3" data-path="overlay.panelScale" data-type="num"></label>
+        </div>
+        <label class="check"><input type="checkbox" data-path="overlay.showPanel" data-type="bool"> Show participant panel</label>
+        <label class="check"><input type="checkbox" data-path="overlay.showResult" data-type="bool"> Show winning result</label>
+        <label class="check"><input type="checkbox" data-path="overlay.showRecent" data-type="bool"> Show recent winners</label>
+        <p class="hint">Save the configuration to update the preview. Add <code>&amp;sound=1</code> to the URL to play sounds from OBS.</p>
+        <div id="prevWrap" class="prevwrap"><iframe id="prev" title="Overlay preview" tabindex="-1"></iframe></div>
+      </details>
+    </div>
+
+    <div class="panel-foot">
+      <div id="dirty" class="dirty hidden">Unsaved changes</div>
+      <div class="row gap wrap">
+        <button class="btn btn-red" id="saveCfg">Save configuration</button>
+        <button class="btn" id="resetCfg">Reset</button>
+        <button class="btn" id="exportCfg">Export</button>
+        <button class="btn" id="importCfg">Import</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER: wheel -->
+  <section id="center">
+    <div class="now">
+      <div class="now-label">Spinning for</div>
+      <div id="nowName" class="now-name">—</div>
+      <div id="nowSub" class="now-sub"></div>
+    </div>
+    <div class="stage">
+      <canvas id="wheel" aria-label="Prize wheel"></canvas>
+      <canvas id="fx" aria-hidden="true"></canvas>
+    </div>
+    <div id="result" class="result"></div>
+    <button id="spinBtn" class="spin" disabled>SPIN</button>
+    <div id="spinMsg" class="spinmsg"></div>
+    <div class="row gap center-row">
+      <label class="sel">Participant
+        <select id="pickSel"></select>
+      </label>
+      <button class="btn" id="skipBtn">Skip participant</button>
+      <button class="btn" id="removeBtn">Remove from queue</button>
+      <button class="btn btn-red hidden" id="confirmBtn">Confirm result</button>
+    </div>
+  </section>
+
+  <!-- RIGHT: Subs & spins -->
+  <aside id="right" class="panel">
+    <h2 class="panel-title">Subs &amp; spins</h2>
+    <div class="stats"><div><b id="stWait">0</b><span>spins waiting</span></div><div><b id="stPeople">0</b><span>participants</span></div><div><b id="stDone">0</b><span>spins done</span></div></div>
+    <div class="row gap">
+      <input id="search" placeholder="Search usernames" aria-label="Search usernames">
+      <select id="sort" aria-label="Sort"><option value="arrival">Arrival</option><option value="remaining">Most spins left</option><option value="name">Name</option></select>
+    </div>
+    <label class="check"><input type="checkbox" id="pendingOnly"> Only with pending spins</label>
+    <form id="addForm" class="row gap">
+      <input id="addName" placeholder="Add participant" aria-label="Username to add">
+      <input id="addSpins" type="number" min="0" value="1" style="width:64px" aria-label="Spins">
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="scroll"><div id="plist" class="plist"></div>
+      <h3 class="subhead">Recent winners</h3>
+      <div id="winners" class="feed"></div>
+      <h3 class="subhead">Activity</h3>
+      <div id="activity" class="feed small"></div>
+    </div>
+    <div class="panel-foot row gap">
+      <button class="btn" id="histBtn">Full history</button>
+      <a class="btn" id="csvBtn" href="#">Export CSV</a>
+    </div>
+  </aside>
+</main>
+
+<dialog id="histDlg">
+  <div class="dlg-head"><h2>Spin history</h2><button class="btn" id="histClose">Close</button></div>
+  <div id="histInfo" class="hint"></div>
+  <div class="tablewrap"><table id="histTable"></table></div>
+  <div class="row gap"><button class="btn btn-ghost" id="histClear">Clear history…</button></div>
+</dialog>
+
+<dialog id="tokenDlg">
+  <form method="dialog" id="tokenForm">
+    <h2>Admin token</h2>
+    <p class="hint">This browser doesn't know your admin token yet. It's needed once per browser and per address (opening the app via the ngrok address counts as a new address). Paste the token or the whole Admin URL below.</p>
+    <p class="hint"><b>Where to find it:</b></p>
+    <ul class="hint">
+      <li>In the server window: when the app starts it prints <code>Admin : http://127.0.0.1:3000/#token=…</code>. Copy everything after <code>token=</code>, or the whole line.</li>
+      <li>In the file <code>data/secrets.json</code> in the app folder, the value of <code>adminToken</code>.</li>
+    </ul>
+    <p class="hint">Keep this token private. Don't show it on stream.</p>
+    <input id="tokenIn" autocomplete="off" placeholder="Token or Admin URL" style="width:100%">
+    <div class="row gap" style="margin-top:12px"><button class="btn btn-red" value="ok">Continue</button></div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/shared.js"></script>
+<script src="/wheel.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>

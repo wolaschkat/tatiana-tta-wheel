@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TATIANA TTA WHEEL — Overlay</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { font-family: "Arial Narrow", Impact, "Segoe UI", sans-serif; color: #fff; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  #wheel { position: absolute; }
+  #fx { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; }
+  #panel { position: absolute; width: 520px; transform-origin: 0 0; display: flex; flex-direction: column; gap: 14px; }
+  .box { background: rgba(8, 8, 8, .92); border: 3px solid #E50914; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 3px #fff inset; }
+  .lbl { font: 700 18px sans-serif; letter-spacing: .16em; color: #bbb; text-transform: uppercase; }
+  .name { font: 900 56px/1.05 "Arial Narrow", Impact, sans-serif; text-transform: uppercase; overflow-wrap: anywhere; }
+  .sub { font: 700 24px sans-serif; color: #fff; margin-top: 4px; }
+  .res { background: #E50914; border-color: #fff; }
+  .res .big { font: 900 60px/1.05 "Arial Narrow", Impact, sans-serif; overflow-wrap: anywhere; }
+  .res .who { font: 700 24px sans-serif; margin-top: 6px; }
+  .recent div { display: flex; align-items: center; gap: 10px; font: 700 22px sans-serif; padding: 4px 0; }
+  .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; flex: none; }
+  .hidden { display: none !important; }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .res.pop { animation: pop .35s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .res.pop { animation: none; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="wheel"></canvas>
+  <div id="panel">
+    <div id="pbox" class="box"><div class="lbl">Spinning for</div><div id="pname" class="name">—</div><div id="psub" class="sub"></div></div>
+    <div id="rbox" class="box res hidden"><div class="lbl" style="color:#fff">Result</div><div id="rbig" class="big"></div><div id="rwho" class="who"></div></div>
+    <div id="recent" class="box recent hidden"><div class="lbl">Recent winners</div><div id="rlist"></div></div>
+  </div>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+</div>
+<script src="/shared.js"></script>
+<script src="/wheel.js"></script>
+<script>
+(function () {
+  'use strict';
+  const T = window.TTA, W = window.TTAWheel;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+  const wantSound = params.get('sound') === '1';
+  const wheel = W.createWheel($('wheel'));
+  let snap = null, layoutKey = '';
+
+  function fitStage() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); $('stage').style.transform = 'scale(' + s + ')'; }
+  addEventListener('resize', fitStage); fitStage();
+
+  const controller = W.createController(wheel, {
+    onSpinStart() { render(); },
+    onReveal() { render(true); if (snap && snap.anim.effects) W.confetti($('fx')); if (wantSound) W.Sound.fanfare(); },
+  });
+
+  function place(o) {
+    const w = $('wheel'), size = o.wheelSize;
+    w.style.width = size + 'px'; w.style.height = size + 'px';
+    w.style.left = (o.wheelX - size / 2) + 'px'; w.style.top = (o.wheelY - size / 2) + 'px';
+    if (+w.dataset.px !== size) { w.dataset.px = size; wheel.resize(); }
+    const p = $('panel'); p.style.left = o.panelX + 'px'; p.style.top = o.panelY + 'px'; p.style.transform = 'scale(' + o.panelScale + ')';
+    $('pbox').classList.toggle('hidden', !o.showPanel);
+    $('recent').classList.toggle('hidden', !o.showRecent);
+  }
+
+  function render(pop) {
+    if (!snap) return;
+    const s = snap.spin, sel = snap.selected, o = snap.overlay;
+    if (s) { $('pname').textContent = s.username; $('psub').textContent = 'Spin #' + s.spinNumber; }
+    else if (sel) { $('pname').textContent = sel.username; $('psub').textContent = sel.remaining + ' spin' + (sel.remaining === 1 ? '' : 's') + ' remaining'; }
+    else { $('pname').textContent = '—'; $('psub').textContent = ''; }
+    const rb = $('rbox');
+    let shown = null;
+    if (s) { if (controller.isRevealed(s)) shown = { seg: s.segmentName, who: s.username }; }
+    else if (snap.lastResult) shown = { seg: snap.lastResult.segment, who: snap.lastResult.username };
+    rb.classList.toggle('hidden', !(shown && o.showResult));
+    if (shown) { $('rbig').textContent = shown.seg; $('rwho').textContent = shown.who; if (pop) { rb.classList.remove('pop'); void rb.offsetWidth; rb.classList.add('pop'); } }
+    $('rlist').innerHTML = snap.recent.map((r) => `<div><span class="dot" style="background:${esc(r.color)}"></span>${esc(r.username)} — ${esc(r.segment)}</div>`).join('');
+  }
+
+  function connect() {
+    const es = new EventSource('/events?role=overlay&token=' + encodeURIComponent(token));
+    es.addEventListener('state', (e) => {
+      snap = JSON.parse(e.data);
+      W.Sound.enabled = wantSound && snap.anim.sound; W.Sound.spin = snap.anim.spinSound; W.Sound.win = snap.anim.winSound; W.Sound.volume = snap.anim.volume;
+      if (wantSound) W.Sound.unlock();
+      place(snap.overlay);
+      const key = JSON.stringify(snap.layout.map((l) => [l.id, l.name, l.color, Math.round(l.start * 100)]));
+      if (!snap.spin && key !== layoutKey || layoutKey === '') { layoutKey = key; wheel.setLayout(snap.layout); }
+      controller.update(snap);
+      render();
+    });
+    es.onerror = () => {}; // EventSource reconnects on its own
+  }
+  connect();
+})();
+</script>
+</body>
+</html>
